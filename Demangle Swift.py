@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import re, subprocess
+import re, subprocess, os
+from ctypes import cdll, create_string_buffer, sizeof
 
 
 # ---------------------------------------------------------------------------
@@ -12,6 +13,7 @@ SWIFT_DEMANGLE = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDef
 
 def findSwiftDemangle():
 	global SWIFT_DEMANGLE
+	global swift_demangle_getDemangledName
 	
 	process = subprocess.Popen( [ "xcrun", "--find", "swift-demangle" ],
 								stdout = subprocess.PIPE,
@@ -25,20 +27,33 @@ def findSwiftDemangle():
 
 	SWIFT_DEMANGLE = output.rstrip("\n")
 
+	dylib = os.path.realpath(SWIFT_DEMANGLE + "/../../lib/libswiftDemangle.dylib")
+	try:
+		swift_demangle_getDemangledName = cdll.LoadLibrary(dylib)["swift_demangle_getDemangledName"]
+	except (OSError, AttributeError) as e:
+		swift_demangle_getDemangledName = None
+		Document.getCurrentDocument().log("swift_demangle_getDemangledName not found in libswiftDemangle.dylib\n" + str(e))
+
 
 def demangleSwift(name):
-	process = subprocess.Popen( [ SWIFT_DEMANGLE ],
-								stdin  = subprocess.PIPE,
-								stdout = subprocess.PIPE,
-								stderr = subprocess.PIPE)
+	global swift_demangle_getDemangledName
+	if (swift_demangle_getDemangledName != None):
+		demangled = create_string_buffer(len(name) * 4)
+		length = swift_demangle_getDemangledName(name, demangled, sizeof(demangled))
+		return demangled.value if length > 0 else name
+	else:
+		process = subprocess.Popen( [ SWIFT_DEMANGLE ],
+									stdin  = subprocess.PIPE,
+									stdout = subprocess.PIPE,
+									stderr = subprocess.PIPE)
 
-	output, error = process.communicate(name)
+		output, error = process.communicate(name)
 
-	retcode = process.returncode
-	if retcode != 0:
-		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
+		retcode = process.returncode
+		if retcode != 0:
+			raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
 
-	return output.rstrip("\n")
+		return output.rstrip("\n")
 
 
 def demangleClassName(name):
@@ -62,7 +77,7 @@ def demangleIndirect(name):
 	                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	"""
 
-	rname = re.search(r"__T[\d\w]+", name).group(0)
+	rname = re.search(r"_T[\d\w]+", name).group(0)
 
 	output = demangleSwift(rname)
 
