@@ -68,9 +68,6 @@ def demangleIndirect(name):
 
 	# fail
 	if output in rname:
-		doc = Document.getCurrentDocument()
-		doc.log("Failed to demangle symbol at address: 0x%016x with name: %s" % (doc.getCurrentAddress(), name))
-
 		return name
 
 	# ivar
@@ -96,13 +93,23 @@ def main():
 			if name is None:
 				continue
 
-			if name[0:4] in [ "+[_T", "-[_T" ]:
-				doc.moveCursorAtAddress(address)
-				seg.setNameAtAddress(address, demangleClassName(name))
+			elif name[0:4] in [ "+[_T", "-[_T" ]:
+				demangled = demangleClassName(name)
 
-			if name[0:4] in [ "objc", "imp_" ] and "__T" in name:
-				doc.moveCursorAtAddress(address)
-				seg.setNameAtAddress(address, demangleIndirect(name))
+			elif name[0:4] in [ "objc", "imp_" ] and "__T" in name:
+				demangled = demangleIndirect(name)
+
+			else:
+				continue
+
+			doc.moveCursorAtAddress(address)
+
+			if name is demangled:
+				doc.log("Failed to demangle symbol at address: 0x%08x with name: %s" % (address, name))
+				continue
+
+			seg.setNameAtAddress(address, demangled)
+			# doc.log("Demangled symbol at address: 0x%08x with name: %s" % (address, demangled))
 
 	doc.moveCursorAtAddress(current)
 
