@@ -27,7 +27,7 @@ def findSwiftDemangle():
 
 
 def demangleSwift(name):
-	process = subprocess.Popen( [ SWIFT_DEMANGLE, "-compact" ],
+	process = subprocess.Popen( [ SWIFT_DEMANGLE ],
 								stdin  = subprocess.PIPE,
 								stdout = subprocess.PIPE,
 								stderr = subprocess.PIPE)
