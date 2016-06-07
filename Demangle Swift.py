@@ -1,59 +1,90 @@
 #!/usr/bin/python
 
-import re, subprocess, os
+import re, subprocess
 from ctypes import cdll, create_string_buffer, sizeof
+from datetime import datetime
 
 
 # ---------------------------------------------------------------------------
 
-SWIFT_DEMANGLE = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-demangle"
+SWIFT_DEMANGLE_CLI = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-demangle"
+
+SWIFT_DEMANGLE_FUN = None
+SWIFT_DEMANGLE_LIB = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libswiftDemangle.dylib"
+SWIFT_DEMANGLE_SYM = "swift_demangle_getDemangledName"
 
 
 # ---------------------------------------------------------------------------
 
-def findSwiftDemangle():
-	global SWIFT_DEMANGLE
-	global swift_demangle_getDemangledName
-	
+def findSwiftDemangleCLI():
+	global SWIFT_DEMANGLE_CLI
+
 	process = subprocess.Popen( [ "xcrun", "--find", "swift-demangle" ],
 								stdout = subprocess.PIPE,
 								stderr = subprocess.PIPE)
-	
+
 	output, error = process.communicate()
-	
+	retcode = process.returncode
+
+	if retcode != 0:
+		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
+
+	SWIFT_DEMANGLE_CLI = output.rstrip("\n")
+
+
+def findSwiftDemangleLib():
+	global SWIFT_DEMANGLE_LIB
+
+	process = subprocess.Popen( [ "xcode-select", "--print-path" ],
+								stdout = subprocess.PIPE,
+								stderr = subprocess.PIPE)
+
+	output, error = process.communicate()
+	retcode = process.returncode
+
+	if retcode != 0:
+		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
+
+	SWIFT_DEMANGLE_LIB = output.rstrip("\n") + "/Toolchains/XcodeDefault.xctoolchain/usr/lib/libswiftDemangle.dylib"
+
+
+def loadSwiftDemangleLib():
+	global SWIFT_DEMANGLE_FUN
+
+	SWIFT_DEMANGLE_FUN = cdll.LoadLibrary(SWIFT_DEMANGLE_LIB)[SWIFT_DEMANGLE_SYM]
+
+
+def demangleSwiftLib(name):
+	demangled = create_string_buffer(len(name) * 4)
+
+	length = SWIFT_DEMANGLE_FUN(name, demangled, sizeof(demangled))
+
+	if length > 0:
+		return demangled.value
+
+	return name
+
+
+def demangleSwiftCLI(name):
+	process = subprocess.Popen( [ SWIFT_DEMANGLE_CLI ],
+								stdin  = subprocess.PIPE,
+								stdout = subprocess.PIPE,
+								stderr = subprocess.PIPE)
+
+	output, error = process.communicate(name)
+
 	retcode = process.returncode
 	if retcode != 0:
 		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
 
-	SWIFT_DEMANGLE = output.rstrip("\n")
-
-	dylib = os.path.realpath(SWIFT_DEMANGLE + "/../../lib/libswiftDemangle.dylib")
-	try:
-		swift_demangle_getDemangledName = cdll.LoadLibrary(dylib)["swift_demangle_getDemangledName"]
-	except (OSError, AttributeError) as e:
-		swift_demangle_getDemangledName = None
-		Document.getCurrentDocument().log("swift_demangle_getDemangledName not found in libswiftDemangle.dylib\n" + str(e))
+	return output.rstrip("\n")
 
 
 def demangleSwift(name):
-	global swift_demangle_getDemangledName
-	if (swift_demangle_getDemangledName != None):
-		demangled = create_string_buffer(len(name) * 4)
-		length = swift_demangle_getDemangledName(name, demangled, sizeof(demangled))
-		return demangled.value if length > 0 else name
-	else:
-		process = subprocess.Popen( [ SWIFT_DEMANGLE ],
-									stdin  = subprocess.PIPE,
-									stdout = subprocess.PIPE,
-									stderr = subprocess.PIPE)
+	if SWIFT_DEMANGLE_FUN:
+		return demangleSwiftLib(name)
 
-		output, error = process.communicate(name)
-
-		retcode = process.returncode
-		if retcode != 0:
-			raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
-
-		return output.rstrip("\n")
+	return demangleSwiftCLI(name)
 
 
 def demangleClassName(name):
@@ -73,8 +104,8 @@ def demangleIndirect(name):
 	"""
 	demangle: imp___stubs___TFO21MicroSnitchFoundation9MediaType5VideoFMS0_S0_
 	                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	      to: imp___stubs___MicroSnitchFoundation.MediaType.Video (MicroSnitchFoundation.MediaType.Type) -> MicroSnitchFoundation.MediaType
-	                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	      to: imp___stubs__MicroSnitchFoundation.MediaType.Video (MicroSnitchFoundation.MediaType.Type) -> MicroSnitchFoundation.MediaType
+	                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	"""
 
 	rname = re.search(r"_T[\d\w]+", name).group(0)
@@ -88,16 +119,28 @@ def demangleIndirect(name):
 	# ivar
 	output = re.sub(r"(.*) with unmangled suffix \"(.*)\"", r"\1\2", output)
 
-	return re.sub(r"(.*?__)T[\d\w]+", r"\1" + output, name)
+	return re.sub(r"(.*?_)_T[\d\w]+", r"\1" + output, name)
 
 
 # ---------------------------------------------------------------------------
 
 def main():
-	findSwiftDemangle()
+	start = datetime.now()
 
 	doc = Document.getCurrentDocument()
-	current = doc.getCurrentAddress()
+
+	findSwiftDemangleCLI()
+	findSwiftDemangleLib()
+	
+	try:
+		loadSwiftDemangleLib()
+	except (OSError, AttributeError) as e:
+		doc.log("Failed to load library with error: %s" % str(e))
+		doc.log("Falling back to CLI mode.")
+
+	success = 0
+	failure = 0
+	skipped = 0
 
 	for index in xrange(doc.getSegmentCount()):
 		seg = doc.getSegment(index)
@@ -115,18 +158,25 @@ def main():
 				demangled = demangleIndirect(name)
 
 			else:
+				skipped += 1
 				continue
 
-			doc.moveCursorAtAddress(address)
-
 			if name is demangled:
+				failure += 1
 				doc.log("Failed to demangle symbol at address: 0x%08x with name: %s" % (address, name))
 				continue
 
+			success += 1
 			seg.setNameAtAddress(address, demangled)
 			# doc.log("Demangled symbol at address: 0x%08x with name: %s" % (address, demangled))
 
-	doc.moveCursorAtAddress(current)
+	doc.log("--------------")
+	doc.log("Demangle Swift")
+	doc.log("--------------")
+	doc.log("Success: %d name(s)" % success)
+	doc.log("Failure: %d name(s)" % failure)
+	doc.log("Skipped: %d name(s)" % skipped)
+	doc.log("Elapsed: %s" % str(datetime.now() - start))
 
 
 # ---------------------------------------------------------------------------
