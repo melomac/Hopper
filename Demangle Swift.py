@@ -10,30 +10,35 @@ SWIFT_DEMANGLE = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDef
 
 # ---------------------------------------------------------------------------
 
-def execute(cmd):
-	process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def findSwiftDemangle():
+	global SWIFT_DEMANGLE
+	
+	process = subprocess.Popen( [ "xcrun", "--find", "swift-demangle" ],
+								stdout = subprocess.PIPE,
+								stderr = subprocess.PIPE)
+	
 	output, error = process.communicate()
+	
 	retcode = process.returncode
+	if retcode != 0:
+		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
 
+	SWIFT_DEMANGLE = output.rstrip("\n")
+
+
+def demangleSwift(name):
+	process = subprocess.Popen( [ SWIFT_DEMANGLE, "-compact" ],
+								stdin  = subprocess.PIPE,
+								stdout = subprocess.PIPE,
+								stderr = subprocess.PIPE)
+
+	output, error = process.communicate(name)
+
+	retcode = process.returncode
 	if retcode != 0:
 		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
 
 	return output.rstrip("\n")
-
-
-def findSwiftDemangle():
-	global SWIFT_DEMANGLE
-
-	cmd = [ "xcrun", "--find", "swift-demangle" ]
-
-	SWIFT_DEMANGLE = execute(cmd)
-
-
-def demangleSwift(name):
-	# cmd = [ "xcrun", "swift-demangle", "-compact", name ]
-	cmd = [ SWIFT_DEMANGLE, "-compact", name ]
-
-	return execute(cmd)
 
 
 def demangleClassName(name):
