@@ -151,6 +151,9 @@ def main():
 		if name[0:4] in [ "+[_T", "-[_T" ]:
 			demangled = demangleClassName(name)
 
+		elif name[0:3] == "__T":
+			demangled = demangleIndirect(name)
+
 		elif name[0:4] in [ "objc", "imp_" ] and "__T" in name:
 			demangled = demangleIndirect(name)
 
