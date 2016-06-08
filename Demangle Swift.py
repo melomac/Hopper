@@ -126,12 +126,17 @@ def demangleIndirect(name):
 
 def main():
 	start = datetime.now()
+	names = []
 
 	doc = Document.getCurrentDocument()
 
+	for index in xrange(doc.getSegmentCount()):
+		seg = doc.getSegment(index)
+		names += seg.getLabelsList()
+
 	findSwiftDemangleCLI()
 	findSwiftDemangleLib()
-	
+
 	try:
 		loadSwiftDemangleLib()
 	except (OSError, AttributeError) as e:
@@ -142,33 +147,27 @@ def main():
 	failure = 0
 	skipped = 0
 
-	for index in xrange(doc.getSegmentCount()):
-		seg = doc.getSegment(index)
+	for name in names:
+		if name[0:4] in [ "+[_T", "-[_T" ]:
+			demangled = demangleClassName(name)
 
-		for address in xrange(seg.getStartingAddress(), seg.getStartingAddress() + seg.getLength()):
-			name = seg.getNameAtAddress(address)
+		elif name[0:4] in [ "objc", "imp_" ] and "__T" in name:
+			demangled = demangleIndirect(name)
 
-			if name is None:
-				continue
+		else:
+			skipped += 1
+			continue
 
-			elif name[0:4] in [ "+[_T", "-[_T" ]:
-				demangled = demangleClassName(name)
+		address = doc.getAddressForName(name)
 
-			elif name[0:4] in [ "objc", "imp_" ] and "__T" in name:
-				demangled = demangleIndirect(name)
+		if demangled is name:
+			failure += 1
+			doc.log("Failed to demangle symbol at address: 0x%08x with name: %s" % (address, name))
+			continue
 
-			else:
-				skipped += 1
-				continue
-
-			if name is demangled:
-				failure += 1
-				doc.log("Failed to demangle symbol at address: 0x%08x with name: %s" % (address, name))
-				continue
-
-			success += 1
-			seg.setNameAtAddress(address, demangled)
-			# doc.log("Demangled symbol at address: 0x%08x with name: %s" % (address, demangled))
+		success += 1
+		doc.setNameAtAddress(address, demangled)
+		# doc.log("Demangled symbol at address: 0x%08x with name: %s" % (address, demangled))
 
 	doc.log("--------------")
 	doc.log("Demangle Swift")
