@@ -90,28 +90,8 @@ def demangleSwift(name):
 	return demangleSwiftCLI(name)
 
 
-def demangleClassName(name):
-	"""
-	demangle: -[_TtC12Micro_Snitch13AppController init]
-	            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	      to: -[Micro_Snitch.AppController init]
-	            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-	"""
-
-	rname = re.search(r"[^+-\[][\d\w]+", name).group(0)
-
-	return re.sub(r"([+-\[])[\d\w]+(.*)", r"\1%s\2" % demangleSwift(rname), name)
-
-
-def demangleIndirect(name):
-	"""
-	demangle: imp___stubs___TFO21MicroSnitchFoundation9MediaType5VideoFMS0_S0_
-	                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	      to: imp___stubs__MicroSnitchFoundation.MediaType.Video (MicroSnitchFoundation.MediaType.Type) -> MicroSnitchFoundation.MediaType
-	                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-	"""
-
-	rname = re.search(r"_T[\d\w]+", name).group(0)
+def demangleLabel(name):
+	rname = re.search(r"(.*?)(_T[\d\w]+)(.*)", name).group(2)
 
 	output = demangleSwift(rname)
 
@@ -122,7 +102,7 @@ def demangleIndirect(name):
 	# ivar
 	output = re.sub(r"(.*) with unmangled suffix \"(.*)\"", r"\1\2", output)
 
-	return re.sub(r"(.*?_)_T[\d\w]+", r"\1" + output, name)
+	return re.sub(r"(.*?)(_T[\d\w]+)(.*)", r"\1%s\3" % demangleSwift(output), name)
 
 
 # ---------------------------------------------------------------------------
@@ -152,19 +132,20 @@ def main():
 
 	for name in names:
 		if name[0:4] in [ "+[_T", "-[_T" ]:
-			demangled = demangleClassName(name)
+			demangled = demangleLabel(name)
 
 		elif name[0:3] == "__T":
-			demangled = demangleIndirect(name)
+			demangled = demangleLabel(name)
 
 		elif name[0:4] in [ "objc", "imp_" ] and "__T" in name:
-			demangled = demangleIndirect(name)
+			demangled = demangleLabel(name)
 
 		else:
 			skipped += 1
 			continue
 
 		address = doc.getAddressForName(name)
+		# doc.moveCursorAtAddress(address)
 
 		if demangled is name:
 			failure += 1
