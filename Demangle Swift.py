@@ -54,10 +54,13 @@ def loadSwiftDemangleLib():
 	SWIFT_DEMANGLE_FUN = cdll.LoadLibrary(SWIFT_DEMANGLE_LIB)[SWIFT_DEMANGLE_SYM]
 
 
-def demangleSwiftLib(name):
-	demangled = create_string_buffer(len(name) * 4)
+def demangleSwiftLib(name, size = 512):
+	demangled = create_string_buffer(size)
 
 	length = SWIFT_DEMANGLE_FUN(name, demangled, sizeof(demangled))
+
+	if length > size:
+		return demangleSwiftLib(name, length + 1)
 
 	if length > 0:
 		return demangled.value
