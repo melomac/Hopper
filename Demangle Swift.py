@@ -16,36 +16,27 @@ SWIFT_DEMANGLE_SYM = "swift_demangle_getDemangledName"
 
 # ---------------------------------------------------------------------------
 
-def findSwiftDemangleCLI():
-	global SWIFT_DEMANGLE_CLI
-
-	process = subprocess.Popen( [ "xcrun", "--find", "swift-demangle" ],
-								stdout = subprocess.PIPE,
-								stderr = subprocess.PIPE)
-
-	output, error = process.communicate()
+def execute(cmd, data=None):
+	process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	output, error = process.communicate(data)
 	retcode = process.returncode
 
 	if retcode != 0:
-		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
+		raise Exception(" ".join(cmd), data, retcode, error.rstrip("\n"))
 
-	SWIFT_DEMANGLE_CLI = output.rstrip("\n")
+	return output.rstrip("\n")
+
+
+def findSwiftDemangleCLI():
+	global SWIFT_DEMANGLE_CLI
+
+	SWIFT_DEMANGLE_CLI = execute([ "xcrun", "--find", "swift-demangle" ])
 
 
 def findSwiftDemangleLib():
 	global SWIFT_DEMANGLE_LIB
 
-	process = subprocess.Popen( [ "xcode-select", "--print-path" ],
-								stdout = subprocess.PIPE,
-								stderr = subprocess.PIPE)
-
-	output, error = process.communicate()
-	retcode = process.returncode
-
-	if retcode != 0:
-		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
-
-	SWIFT_DEMANGLE_LIB = output.rstrip("\n") + "/Toolchains/XcodeDefault.xctoolchain/usr/lib/libswiftDemangle.dylib"
+	SWIFT_DEMANGLE_LIB = execute([ "xcode-select", "--print-path" ]) + "/Toolchains/XcodeDefault.xctoolchain/usr/lib/libswiftDemangle.dylib"
 
 
 def loadSwiftDemangleLib():
@@ -54,7 +45,7 @@ def loadSwiftDemangleLib():
 	SWIFT_DEMANGLE_FUN = cdll.LoadLibrary(SWIFT_DEMANGLE_LIB)[SWIFT_DEMANGLE_SYM]
 
 
-def demangleSwiftLib(name, size = 512):
+def demangleSwiftLib(name, size=512):
 	demangled = create_string_buffer(size)
 
 	length = SWIFT_DEMANGLE_FUN(name, demangled, sizeof(demangled))
@@ -69,18 +60,7 @@ def demangleSwiftLib(name, size = 512):
 
 
 def demangleSwiftCLI(name):
-	process = subprocess.Popen( [ SWIFT_DEMANGLE_CLI ],
-								stdin  = subprocess.PIPE,
-								stdout = subprocess.PIPE,
-								stderr = subprocess.PIPE)
-
-	output, error = process.communicate(name)
-
-	retcode = process.returncode
-	if retcode != 0:
-		raise Exception(" ".join(cmd), retcode, error.rstrip("\n"))
-
-	return output.rstrip("\n")
+	return execute([ SWIFT_DEMANGLE_CLI ], name)
 
 
 def demangleSwift(name):
@@ -109,15 +89,9 @@ def demangleLabel(name):
 
 def main():
 	start = datetime.now()
-	names = []
 
 	doc = Document.getCurrentDocument()
 
-	for index in xrange(doc.getSegmentCount()):
-		seg = doc.getSegment(index)
-		names += seg.getLabelsList()
-
-	findSwiftDemangleCLI()
 	findSwiftDemangleLib()
 
 	try:
@@ -126,9 +100,16 @@ def main():
 		doc.log("Failed to load library with error: %s" % str(e))
 		doc.log("Falling back to CLI mode.")
 
+		findSwiftDemangleCLI()
+
+	names = []
 	success = 0
 	failure = 0
 	skipped = 0
+
+	for index in xrange(doc.getSegmentCount()):
+		seg = doc.getSegment(index)
+		names += seg.getLabelsList()
 
 	for name in names:
 		if name[0:4] in [ "+[_T", "-[_T" ]:
