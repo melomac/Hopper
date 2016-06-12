@@ -1,16 +1,15 @@
 #!/usr/bin/python
 
-import re, subprocess
+import os, re, subprocess
 from ctypes import cdll, create_string_buffer, sizeof
 from datetime import datetime
 
 
 # ---------------------------------------------------------------------------
 
-SWIFT_DEMANGLE_CLI = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-demangle"
-
+SWIFT_DEMANGLE_CLI = None
 SWIFT_DEMANGLE_FUN = None
-SWIFT_DEMANGLE_LIB = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/libswiftDemangle.dylib"
+SWIFT_DEMANGLE_LIB = None
 SWIFT_DEMANGLE_SYM = "swift_demangle_getDemangledName"
 
 
@@ -27,16 +26,12 @@ def execute(cmd, data=None):
 	return output.rstrip("\n")
 
 
-def findSwiftDemangleCLI():
+def findSwiftDemangle():
 	global SWIFT_DEMANGLE_CLI
-
-	SWIFT_DEMANGLE_CLI = execute([ "xcrun", "--find", "swift-demangle" ])
-
-
-def findSwiftDemangleLib():
 	global SWIFT_DEMANGLE_LIB
 
-	SWIFT_DEMANGLE_LIB = execute([ "xcode-select", "--print-path" ]) + "/Toolchains/XcodeDefault.xctoolchain/usr/lib/libswiftDemangle.dylib"
+	SWIFT_DEMANGLE_CLI = execute([ "xcrun", "--find", "swift-demangle" ])
+	SWIFT_DEMANGLE_LIB = os.path.realpath(SWIFT_DEMANGLE_CLI + "/../../lib/libswiftDemangle.dylib")
 
 
 def loadSwiftDemangleLib():
@@ -92,15 +87,13 @@ def main():
 
 	doc = Document.getCurrentDocument()
 
-	findSwiftDemangleLib()
+	findSwiftDemangle()
 
 	try:
 		loadSwiftDemangleLib()
 	except (OSError, AttributeError) as e:
 		doc.log("Failed to load library with error: %s" % str(e))
 		doc.log("Falling back to CLI mode.")
-
-		findSwiftDemangleCLI()
 
 	names = []
 	success = 0
