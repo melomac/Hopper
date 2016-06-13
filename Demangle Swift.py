@@ -85,37 +85,29 @@ def demangleLabel(name):
 def main():
 	start = datetime.now()
 
-	doc = Document.getCurrentDocument()
-
 	findSwiftDemangle()
-
 	try:
 		loadSwiftDemangleLib()
 	except (OSError, AttributeError) as e:
 		doc.log("Failed to load library with error: %s" % str(e))
 		doc.log("Falling back to CLI mode.")
 
-	names = []
-	success = 0
-	failure = 0
-	skipped = 0
+	doc = Document.getCurrentDocument()
 
+	names = []
 	for index in xrange(doc.getSegmentCount()):
 		seg = doc.getSegment(index)
 		names += seg.getLabelsList()
 
+	success = 0
+	failure = 0
+	skipped = 0
 	for name in names:
-		if name[0:4] in [ "+[_T", "-[_T" ]:
+		if "_T" in name[0:4] or "__T" in name:
 			demangled = demangleLabel(name)
-
-		elif name[0:3] == "__T":
-			demangled = demangleLabel(name)
-
-		elif name[0:4] in [ "objc", "imp_" ] and "__T" in name:
-			demangled = demangleLabel(name)
-
 		else:
 			skipped += 1
+			# doc.log("Skipped symbol with name: %s" % name)
 			continue
 
 		address = doc.getAddressForName(name)
