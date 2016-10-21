@@ -30,6 +30,8 @@ def main():
 	# os.system("/usr/local/bin/bbedit '%s'" % dest)
 	# os.system("/usr/local/bin/mate '%s'" % dest)
 	# os.system("/usr/local/bin/see '%s'" % dest)
+	# os.system("/Applications/MacVim.app/Contents/MacOS/Vim -g '%s'" % dest)
+	# os.system("open -n -b 'com.microsoft.VSCode' --args '%s'" % dest)
 	os.system("/usr/local/bin/subl '%s'" % dest)
 
 
