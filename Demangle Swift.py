@@ -84,6 +84,7 @@ def demangleLabel(name):
 
 def main():
 	start = datetime.now()
+	doc = Document.getCurrentDocument()
 
 	findSwiftDemangle()
 	try:
@@ -91,8 +92,6 @@ def main():
 	except (OSError, AttributeError) as e:
 		doc.log("Failed to load library with error: %s" % str(e))
 		doc.log("Falling back to CLI mode.")
-
-	doc = Document.getCurrentDocument()
 
 	names = []
 	for index in xrange(doc.getSegmentCount()):
