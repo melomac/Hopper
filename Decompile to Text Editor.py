@@ -18,7 +18,7 @@ def main():
 	eip = proc.getEntryPoint()
 
 	name = seg.getNameAtAddress(eip)
-	head = "{ret} {name}{args}".format(ret = "", name = name, args = "")
+	head = proc.signatureString()
 	code = proc.decompile()
 
 	dest = "/tmp/{name}_{time}.m".format(name = name, time = time.time())
