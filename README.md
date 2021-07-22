@@ -4,7 +4,7 @@ Python scripts for [Hopper Disassembler](http://hopperapp.com/) on OS X.
 To install, copy the script to `~/Library/Application Support/Hopper/Scripts`. You may need to run the `Reload Script Folder Contents` command located in the `Scripts` menu.
 
 
-### [Decompile to Text Editor](Decompile to Text Editor.py)
+### [Decompile to Text Editor](Decompile%20to%20Text%20Editor.py)
 
 Open current procedure in your favorite text editor, so you can enjoy syntax coloring, registers selection, find next, find previous, find all and replace, _etc._. It's awesome with [Sublime Text](https://www.sublimetext.com/).
 
@@ -29,7 +29,7 @@ And comment other text editors. Feel free to try with other text editors.
 
 
 
-### [Demangle Swift](Demangle Swift.py)
+### [Demangle Swift](Demangle%20Swift.py)
 
 Demangle all labels with [Swift](https://swift.org/) [mangled](https://mikeash.com/pyblog/friday-qa-2014-08-15-swift-name-mangling.html) names.
 
