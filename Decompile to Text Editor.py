@@ -1,10 +1,7 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
-import time
-
-
-# ---------------------------------------------------------------------------
+import tempfile
 
 EDITOR_CLI = {
     'BBEdit': '/usr/local/bin/bbedit',
@@ -16,8 +13,6 @@ EDITOR_CLI = {
 }
 EDITOR = EDITOR_CLI['Sublime Text']
 
-
-# ---------------------------------------------------------------------------
 
 def main():
     doc = Document.getCurrentDocument()
@@ -32,14 +27,10 @@ def main():
     head = proc.signatureString()
     code = proc.decompile()
 
-    dest = f"/tmp/{name}_{time.time()}.m"
-    with open(dest, 'w') as fd:
-        _ = fd.write("%s {\n%s}" % (head, code))
-
-    os.system(f"{EDITOR} '{dest}'")
-
-
-# ---------------------------------------------------------------------------
+    with tempfile.NamedTemporaryFile('w', suffix=".m") as temp:
+        temp.write("%s {\n%s}\n" % (head, code))
+        temp.flush()
+        os.system(f"{EDITOR} '{temp.name}'")
 
 if __name__ == '__main__':
     main()
