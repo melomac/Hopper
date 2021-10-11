@@ -27,7 +27,7 @@ def main():
     head = proc.signatureString()
     code = proc.decompile()
 
-    with tempfile.NamedTemporaryFile('w', suffix=".m") as temp:
+    with tempfile.NamedTemporaryFile('w+t', suffix='.m') as temp:
         temp.write("%s {\n%s}\n" % (head, code))
         temp.flush()
         os.system(f"{EDITOR} '{temp.name}'")
