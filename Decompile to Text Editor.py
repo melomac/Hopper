@@ -1,18 +1,18 @@
 #!/usr/bin/python3
 
-import os
-import time
+import subprocess
+import tempfile
 
 
 # ---------------------------------------------------------------------------
 
 EDITOR_CLI = {
-    'BBEdit': '/usr/local/bin/bbedit',
-    'MacVim': '/Applications/MacVim.app/Contents/MacOS/Vim -g',
-    'SubEthaEdit': '/usr/local/bin/see',
-    'Sublime Text': '/usr/local/bin/subl',
-    'TextMate': '/usr/local/bin/mate',
-    'Visual Studio Code': '/usr/local/bin/code'
+    'BBEdit': ['/usr/local/bin/bbedit'],
+    'MacVim': ['/Applications/MacVim.app/Contents/MacOS/Vim', '-g'],
+    'SubEthaEdit': ['/usr/local/bin/see'],
+    'Sublime Text': ['/usr/local/bin/subl'],
+    'TextMate': ['/usr/local/bin/mate'],
+    'Visual Studio Code': ['/usr/local/bin/code']
 }
 EDITOR = EDITOR_CLI['Sublime Text']
 
@@ -22,21 +22,19 @@ EDITOR = EDITOR_CLI['Sublime Text']
 def main():
     doc = Document.getCurrentDocument()
     seg = doc.getCurrentSegment()
-    adr = doc.getCurrentAddress()
-    proc = seg.getProcedureAtAddress(adr)
+    addr = doc.getCurrentAddress()
+    proc = seg.getProcedureAtAddress(addr)
     if proc is None:
         return
 
-    eip = proc.getEntryPoint()
-    name = seg.getNameAtAddress(eip)
-    head = proc.signatureString()
+    sig = proc.signatureString()
     code = proc.decompile()
+    text = "%s {\n%s}" % (sig, code)
 
-    dest = f"/tmp/{name}_{time.time()}.m"
-    with open(dest, 'w') as fd:
-        _ = fd.write("%s {\n%s}" % (head, code))
-
-    os.system(f"{EDITOR} '{dest}'")
+    with tempfile.NamedTemporaryFile('w', suffix='.m') as temp:
+        temp.write(text)
+        temp.flush()
+        _ = subprocess.call(EDITOR + [temp.name])
 
 
 # ---------------------------------------------------------------------------
