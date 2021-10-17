@@ -3,7 +3,7 @@
 [Hopper Disassembler](http://hopperapp.com/) Python v3 scripts for macOS.
 
 To install, copy or symlink the scripts to `~/Library/Application Support/Hopper/Scripts`.
-You may need to run the `Reload Script Folder Content` command located in the `Scripts` menu.
+If Hopper is already running, you'll have to run the `Reload Script Folder Content` command from the `Scripts` menu.
 
 ## [Decompile to Text Editor](Decompile%20to%20Text%20Editor.py)
 
@@ -16,8 +16,40 @@ A text editor: Sublime Text, [Visual Studio Code](https://code.visualstudio.com/
 
 ### How to
 
-Set the `EDITOR` variable to your favorite editor command.
-A dictionary of base commands is provided.
+On first launch, the script creates a JSON configuration file at: `~/Library/Application Support/Hopper/Scripts/Decompile to Text Editor.json`
+
+Here you have the JSON configuration default contents:
+
+```json
+{
+  "editor": "Sublime Text",
+  "editors": {
+    "BBEdit": [
+      "/usr/local/bin/bbedit"
+    ],
+    "MacVim": [
+      "/Applications/MacVim.app/Contents/MacOS/Vim",
+      "-g"
+    ],
+    "SubEthaEdit": [
+      "/usr/local/bin/see"
+    ],
+    "Sublime Text": [
+      "/usr/local/bin/subl"
+    ],
+    "TextMate": [
+      "/usr/local/bin/mate"
+    ],
+    "Visual Studio Code": [
+      "/usr/local/bin/code"
+    ]
+  }
+}
+```
+
+Set the `editor` value to your favorite editor.
+Add `editors` commands to support even more editors.
+The temporary filepath is the last command parameter.
 
 ## [Demangle Swift](Demangle%20Swift.py)
 
