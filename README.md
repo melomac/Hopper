@@ -5,18 +5,18 @@
 To install, copy or symlink the scripts to `~/Library/Application Support/Hopper/Scripts`.
 If Hopper is already running, you'll have to run the `Reload Script Folder Content` command from the `Scripts` menu.
 
-## [Decompile to Text Editor](Decompile%20to%20Text%20Editor.py)
+## [Decompile to Editor](Decompile%20to%20Editor.py)
 
-Open current procedure in configured text editor for you to enjoy syntax coloring, highlighting, find keyboard shortcuts, _etc._.
-Default text editor is [Sublime Text](https://www.sublimetext.com/).
+Open current procedure in configured code editor for you to enjoy syntax coloring, highlighting, find keyboard shortcuts, _etc._.
+Default editor is [Sublime Text](https://www.sublimetext.com/).
 
 ### Requirements
 
-A text editor: Sublime Text, [Visual Studio Code](https://code.visualstudio.com/), [TextMate](https://macromates.com/), [BBEdit](http://www.barebones.com/products/bbedit/), [SubEthaEdit](https://www.codingmonkeys.de/subethaedit/), _etc._.
+Any supported editor: Sublime Text, [Visual Studio Code](https://code.visualstudio.com/), [TextMate](https://macromates.com/), [BBEdit](http://www.barebones.com/products/bbedit/), [SubEthaEdit](https://www.codingmonkeys.de/subethaedit/), _etc._.
 
 ### How to
 
-On first launch, the script creates a JSON configuration file at: `~/Library/Application Support/Hopper/Scripts/Decompile to Text Editor.json`
+On first launch, the script creates a JSON configuration file at: `~/Library/Application Support/Hopper/Scripts/Decompile to Editor.json`
 
 Here you have the JSON configuration default contents:
 
