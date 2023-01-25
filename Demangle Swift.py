@@ -52,7 +52,7 @@ def demangle_swift_lib(name, size=512):
     length = SWIFT_DEMANGLE_FUN(name.encode(), demangled, sizeof(demangled))
 
     if length > size:
-        return demangle_swift_lib(name.encode(), length + 1)
+        return demangle_swift_lib(name, length + 1)
 
     if length > 0:
         return demangled.value.decode()
@@ -86,7 +86,8 @@ def main():
 
     segs = [doc.getSegment(index) for index in range(doc.getSegmentCount())]
     names = sum([seg.getLabelsList() for seg in segs], [])
-    regex = re.compile(r'(.*?)(_(?:T|\$S|\$s)[^\s@]+)(.*)')
+    label_regex = re.compile(r'(.*?)(_(?:T|\$S|\$s)[^\s@]+)(.*)')
+    block_regex = re.compile(r'(.*?)(_[\da-f]{9})')
     prefixes = ['_T', '_$S', '_$s']
 
     success = 0
@@ -99,12 +100,19 @@ def main():
             skipped += 1
             continue
 
-        matches = regex.search(name)
-        if matches:
-            prefix, mangled, suffix = matches.groups()
+        label_matches = label_regex.search(name)
+        if label_matches:
+            prefix, mangled, suffix = label_matches.groups()
+
+            # mangled_10042cafe
+            block_matches = block_regex.search(mangled)
+            if block_matches:
+                mangled, offset = block_matches.groups()
+                suffix = offset + suffix
+
             demangled = prefix + demangle_swift(mangled) + suffix
 
-        if not matches or demangled is name:
+        if not label_matches or demangled is name:
             doc.log(f"Failed to demangle symbol at address: {address:#08x} with name: {name}")
             failure += 1
             continue
